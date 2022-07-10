@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-from entities import Line, Vector
+from src.entities import Line, Vector
 
 class VVector:
     def __init__(self, x, y, normalized=False):

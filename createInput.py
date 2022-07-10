@@ -1,5 +1,5 @@
 from NacaGenerator import NacaProfile
-from MakePoints import PointMaker
+from src.MakePoints import PointMaker
 from src.entities import Line, Vector
 # from cython_stuff import shortest_distance_cy
 import numpy as np

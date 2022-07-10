@@ -2,6 +2,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from src.entities import Line, Vector
+import os
+
 
 class VVector:
     def __init__(self, x, y, normalized=False):
@@ -34,6 +36,7 @@ class NacaProfile():
 
     def __init__(self, label: str, n: int):
         self.name = label
+        self.rotation: float = 0
         self.n = n
         self.xc = np.zeros(self.n, dtype=float)
         self.yc = np.zeros(self.n, dtype=float)
@@ -108,19 +111,22 @@ class NacaProfile():
         # self.tranform_points()
 
     def transform_points(self, phi: float):
-        if self.is_ready():
-            phi = -phi/180 * np.pi
-
-            upper_old = self.upper.copy()
-            lower_old = self.lower.copy()
-
-            self.upper[:,0] = upper_old[:,0] * np.cos(phi) - upper_old[:,1] * np.sin(phi)
-            self.upper[:,1] = upper_old[:,0] * np.sin(phi) + upper_old[:,1] * np.cos(phi)
-            
-            self.lower[:,0] = lower_old[:,0] * np.cos(phi) - lower_old[:,1] * np.sin(phi)
-            self.lower[:,1] = lower_old[:,0] * np.sin(phi) + lower_old[:,1] * np.cos(phi)
-        else:
+        '''Phi in degrees'''
+        if not self.is_ready():
             raise Exception("Data is empty. Call self.calculate_profile() first.")
+        
+        self.rotation = phi
+        phi = -phi/180 * np.pi
+
+        upper_old = self.upper.copy()
+        lower_old = self.lower.copy()
+
+        self.upper[:,0] = upper_old[:,0] * np.cos(phi) - upper_old[:,1] * np.sin(phi)
+        self.upper[:,1] = upper_old[:,0] * np.sin(phi) + upper_old[:,1] * np.cos(phi)
+        
+        self.lower[:,0] = lower_old[:,0] * np.cos(phi) - lower_old[:,1] * np.sin(phi)
+        self.lower[:,1] = lower_old[:,0] * np.sin(phi) + lower_old[:,1] * np.cos(phi)
+
 
     def is_ready(self):
         return (self.upper!=0).any() and (self.lower!=0).any()
@@ -214,8 +220,10 @@ class NacaProfile():
             # f.write('Layers{1};\n')
             # f.write('Recombine;}\n')
 
-    def to_dat(self):
-        with open(f'NACA_{self.name}.dat', 'w+') as f:
+    def to_dat(self, path: str) -> None:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f'Invaldi path: {path}')
+        with open(f'{path}/NACA_{self.name}_{self.rotation}.dat', 'w+') as f:
             f.write(f'NACA {self.name}\n')
 
             for row in self.upper[::-1]:

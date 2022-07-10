@@ -7,7 +7,7 @@ import os
 
 PATHS = {
     'profiles_list_file': './profiles_list',
-    'profile_storage': '~/Documents/diplomka/NACA_data'
+    'profile_storage': '~/Documents/diplomka/NACA_data/'
 }
 
 AREA: float = 0.75
@@ -15,15 +15,11 @@ GRID_SIZE: int = 64
 CAMBER_POINTS: int = 100
 
 
-def create_input(profile_label: str, number_camber_points: int, rotation: float, plot: bool = False) -> np.ndarray:
-    naca = NacaProfile(profile_label, number_camber_points)
-    naca.calculate_profile()
-
-    naca.transform_points(rotation)
+def create_input(profile: NacaProfile, number_camber_points: int, rotation: float, plot: bool = False) -> np.ndarray:
 
     points = PointMaker(AREA, -AREA, -AREA, AREA, GRID_SIZE, GRID_SIZE)
 
-    dist_field = DistField(naca, points.make())
+    dist_field = DistField(profile, points.make())
 
     tic = time.perf_counter()
     p2 = dist_field.evaluate_parallel()
@@ -41,14 +37,25 @@ def profile_parameters():
             prof_data = line.strip().split(' ')
             if len(prof_data) != 2:
                 raise ValueError('Bad input format (must be: name rotation)')
-            yield prof_data[0], prof_data[1]
+            yield prof_data[0], int(prof_data[1])
 
 def main():
 
     for name, rot in profile_parameters():
         print(name, rot)
 
-    # inp = create_input('6424', CAMBER_POINTS, 0, plot=True)
+        naca = NacaProfile(name, CAMBER_POINTS)
+        naca.calculate_profile()
+        naca.transform_points(rot)
+
+        dir_name: str = f'NACA_{name}_{rot}'
+
+        if not os.path.isdir(f'{PATHS["profile_storage"]}/{dir_name}'):
+            os.mkdir(os.path.join(f'{PATHS["profile_storage"]}',f'{dir_name}'))
+
+        naca.to_dat(f'{PATHS["profile_storage"]}/{dir_name}')
+
+    # inp = create_input(name, CAMBER_POINTS, rot, plot=True)
     # print(inp)
 
 if __name__ == '__main__':

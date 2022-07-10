@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from createInput import Line, DistField, Vector
-from MakePoints import PointMaker
+from main import Line, DistField, Vector
+from src.MakePoints import PointMaker
 from NacaGenerator import NacaProfile
-import cython_stuff
+# import cython_stuff
 
 def first():
     start = np.array([0,0.5])

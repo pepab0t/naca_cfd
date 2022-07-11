@@ -1,10 +1,24 @@
+from wave import Wave_write
 import numpy as np
 import matplotlib.pyplot as plt
 import re
 import concurrent.futures
 from src.entities import Line, Vector
 from src.NacaGenerator import NacaProfile
+import time
 
+from typing import Any, Callable
+
+# time measure decorator
+def timer(fun: Callable[..., Any]) -> Callable[..., Any]:
+    def wrapper(*args, **kwargs) -> Any:
+        tic = time.perf_counter()
+        r = fun(*args, **kwargs)
+        toc = time.perf_counter()
+        print(f'Runtime: {(toc - tic):.2f} s')
+        return r
+
+    return wrapper
 
 class PointMaker:
     probes_filepath = '../NacaAirfoil/system/probes'
@@ -78,6 +92,7 @@ class DistField:
 
         return out
 
+    @timer
     def evaluate_parallel(self) -> np.ndarray:
 
         with concurrent.futures.ProcessPoolExecutor() as executor:

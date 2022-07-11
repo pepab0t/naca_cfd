@@ -1,11 +1,16 @@
+import concurrent.futures
+import os
+import re
+from contextlib import contextmanager
 from subprocess import call
-from src.NacaGenerator import NacaProfile
-from src.tools import PointMaker, DistField
+
 # from cython_stuff import shortest_distance_cy
 import numpy as np
-import time
-import os
-from contextlib import contextmanager
+from more_itertools import consecutive_groups
+from pkg_resources import parse_requirements
+
+from src.NacaGenerator import NacaProfile
+from src.tools import DistField, PointMaker, timer
 
 PATHS = {
     'profiles_list_file': './profiles_list',
@@ -26,61 +31,79 @@ def path_manager(path: str):
     yield 
     os.chdir(previous_path)
 
-def create_input(profile: NacaProfile, number_camber_points: int, rotation: float, plot: bool = False) -> np.ndarray:
+def create_input(profile: NacaProfile, plot: bool = False) -> np.ndarray:
 
     points = PointMaker(AREA, -AREA, -AREA, AREA, GRID_SIZE, GRID_SIZE)
 
     dist_field = DistField(profile, points.make())
 
-    tic = time.perf_counter()
     p2 = dist_field.evaluate_parallel()
-    toc = time.perf_counter()
-    print(toc-tic)
 
     if plot:
         dist_field.plot_input(p2, show=True)
 
     return p2
 
+# this is generator
 def profile_parameters():
     with open(PATHS['profiles_list_file']) as f:
         for line in f.readlines():
             prof_data = line.strip().split(' ')
             if len(prof_data) != 2:
                 raise ValueError('Bad input format (must be: name rotation)')
-            yield prof_data[0], int(prof_data[1])
+            yield prof_data[0], float(prof_data[1])
 
 def call_c2d(source_path: str) -> None:
     '''Calls construct2d'''
     with open(PATHS['c2d_control']) as f:
         instructions: str = f.read()
 
-    instructions = instructions.replace('#profile_path#', source_path+f'/{source_path.split("/")[-1]}.dat')
+    fname: str = source_path.split("/")[-1]
+
+    instructions = instructions.replace('#profile_path#', f'{source_path}/{fname}.dat')
     with path_manager(source_path):
         os.system(f'echo \"{instructions}\" | {PATHS["c2d_path"]}')
+        for filename in os.listdir():
+            if re.search(r'(.*\.nmf|.*stats\.p3d)', filename):
+                os.remove(filename)
+                print(f'removed {filename}')
 
-def main():
-    print(os.path.exists(PATHS['profile_storage']))
-    for name, rot in profile_parameters():
-        print(name, rot)
+# def array_to_file(array: np.ndarray, fname: str, directory: str):
 
-        naca = NacaProfile(name, CAMBER_POINTS)
-        naca.calculate_profile()
-        naca.transform_points(rot)
+def make_item(name: str, rot: float) -> None:
+    print(name, rot)
 
-        dir_name: str = f'NACA_{name}_{rot}'
+    naca = NacaProfile(name, CAMBER_POINTS)
+    naca.calculate_profile()
+    naca.transform_points(rot)
 
-        if not os.path.isdir(f'{PATHS["profile_storage"]}/{dir_name}'):
-            folder = os.path.join(f'{PATHS["profile_storage"]}',f'{dir_name}')
-            os.mkdir(folder)
+    dir_name: str = f'NACA_{name}_{rot}'
 
-        naca.to_dat(f'{PATHS["profile_storage"]}/{dir_name}')
+    if not os.path.isdir(f'{PATHS["profile_storage"]}/{dir_name}'):
+        folder = os.path.join(f'{PATHS["profile_storage"]}',f'{dir_name}')
+        os.mkdir(folder)
 
+    naca.to_dat(f'{PATHS["profile_storage"]}/{dir_name}')
 
+    call_c2d(f"{PATHS['profile_storage']}/{dir_name}")
 
-    # inp = create_input(name, CAMBER_POINTS, rot, plot=True)
-    # print(inp)
+    dist_field = create_input(naca)
+
+    with open(f"{PATHS['profile_storage']}/{dir_name}/input.npy", 'wb') as f:
+        np.save(f, dist_field)
+
+@timer
+def main(parallel: bool = False):
+
+    if parallel:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            [executor.submit(make_item, name, rot) for name, rot in profile_parameters()]
+    else:
+        for name, rot in profile_parameters():
+            make_item(name, rot)
 
 if __name__ == '__main__':
-    # main()
-    call_c2d(f"{PATHS['profile_storage']}/NACA_0012_0")
+    main(parallel=False)
+
+    # a = np.load(f"{PATHS['profile_storage']}/NACA_0012_0/input.npy")
+    # print(a)

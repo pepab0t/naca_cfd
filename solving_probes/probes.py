@@ -24,7 +24,7 @@ def read_probes():
                 sel_line = line.strip()
                 break
     
-    sel_line = sel_line.replace('-1e+300', '10000')
+    sel_line = sel_line.replace('-1e+300', '0')
     vals = re.findall(r'(\S+)',sel_line)
     vals.remove('500')
 

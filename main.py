@@ -1,14 +1,11 @@
 import concurrent.futures
 import os
 import re
+import time
 from contextlib import contextmanager
-from subprocess import call
 
 # from cython_stuff import shortest_distance_cy
 import numpy as np
-from matplotlib import pyplot
-from more_itertools import consecutive_groups
-from pkg_resources import parse_requirements
 
 from src.NacaGenerator import NacaProfile
 from src.tools import DistField, PointMaker, timer
@@ -17,7 +14,8 @@ PATHS = {
     'profiles_list_file': './profiles_list',
     'profile_storage': '/home/cernikjo/Documents/diplomka/NACA_data/',
     'c2d_path': '/home/cernikjo/Construct2D_2.1.4/construct2d',
-    'c2d_control': './src/c2d_control' 
+    'c2d_control': './src/c2d_control',
+    'project': '../test'
 }
 
 AREA: float = 0.75
@@ -34,10 +32,10 @@ def path_manager(path: str):
 
 def create_input(profile: NacaProfile, plot: bool = False) -> np.ndarray:
 
-    maker = PointMaker(AREA, -AREA, -1.5, 1.5, GRID_SIZE, GRID_SIZE)
+    maker = PointMaker(AREA, -AREA, -0.5, 1.5, GRID_SIZE, GRID_SIZE)
     points: np.ndarray = maker.make()
 
-    maker.to_probes(points, '../test', repr=True)
+    maker.to_probes(points, PATHS['project'], repr=False)
     dist_field = DistField(profile, points)
     
     p2 = dist_field.evaluate_parallel()
@@ -57,18 +55,25 @@ def profile_parameters():
 
 def call_c2d(source_path: str) -> None:
     '''Calls construct2d'''
+
     with open(PATHS['c2d_control']) as f:
         instructions: str = f.read()
 
     fname: str = source_path.split("/")[-1]
 
     instructions = instructions.replace('#profile_path#', f'{source_path}/{fname}.dat')
+    c: int = 0
     with path_manager(source_path):
-        os.system(f'echo \"{instructions}\" | {PATHS["c2d_path"]}')
+        while not os.path.isfile(f'{fname}.p3d'):
+            os.system(f'echo \"{instructions}\" | {PATHS["c2d_path"]}')
+            c += 1
+
+        # remove thrash
         for filename in os.listdir():
             if re.search(r'(.*\.nmf|.*stats\.p3d)', filename):
                 os.remove(filename)
                 print(f'removed {filename}')
+    print(f'construct2d runs: {c}')
 
 # def array_to_file(array: np.ndarray, fname: str, directory: str):
 
@@ -105,7 +110,7 @@ def main(parallel: bool = False, plot:bool = False):
             make_item(name, rot, plot)
 
 if __name__ == '__main__':
-    main(parallel=False, plot=False)
+    main(parallel=False, plot=True)
 
     # a = np.load(f"{PATHS['profile_storage']}/NACA_0012_0/input.npy")
     # print(a)

@@ -156,6 +156,8 @@ class DistField:
         plt.colorbar()
 
         plt.plot(profile[:,0], profile[:,1], '-k')
+        
+        plt.axis('equal')
 
         if show:
             plt.show()

@@ -34,14 +34,15 @@ def path_manager(path: str):
 
 def create_input(profile: NacaProfile, plot: bool = False) -> np.ndarray:
 
-    points = PointMaker(AREA, -AREA, -AREA, AREA, GRID_SIZE, GRID_SIZE)
+    maker = PointMaker(AREA, -AREA, -1.5, 1.5, GRID_SIZE, GRID_SIZE)
+    points: np.ndarray = maker.make()
 
-    dist_field = DistField(profile, points.make())
-
+    maker.to_probes(points, '../test', repr=True)
+    dist_field = DistField(profile, points)
+    
     p2 = dist_field.evaluate_parallel()
-
     if plot:
-        dist_field.plot_input(p2, show=True)
+        dist_field.plot_field(p2, show=True)
 
     return p2
 

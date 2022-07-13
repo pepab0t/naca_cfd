@@ -4,8 +4,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.entities import Line, Vector
-
+try:
+    from src.entities import Line, Vector
+except ModuleNotFoundError:
+    from entities import Line, Vector
 
 class VVector:
     def __init__(self, x, y, normalized=False):

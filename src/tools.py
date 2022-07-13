@@ -1,13 +1,17 @@
-from wave import Wave_write
-import numpy as np
-import matplotlib.pyplot as plt
-import re
 import concurrent.futures
-from src.entities import Line, Vector
-from src.NacaGenerator import NacaProfile
+import re
 import time
-
 from typing import Any, Callable
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+try:
+    from src.entities import Line, Vector
+    from src.NacaGenerator import NacaProfile
+except ModuleNotFoundError:
+    from entities import Line
+    from NacaGenerator import NacaProfile
 
 # time measure decorator
 def timer(fun: Callable[..., Any]) -> Callable[..., Any]:
@@ -21,7 +25,7 @@ def timer(fun: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 class PointMaker:
-    probes_filepath = '../NacaAirfoil/system/probes'
+    probes_filepath = '/system/probes'
 
     def __init__(self, top, bottom, left, right, n_v=8, n_h=8):
         self.start_h = left
@@ -34,7 +38,7 @@ class PointMaker:
 
         # self.make()
 
-    def make(self) -> np.array:
+    def make(self) -> np.ndarray:
         points = np.zeros(shape=(self.n_v, self.n_h, 2))
         for i in range(self.n_v):
             for j in range(self.n_h):
@@ -45,14 +49,14 @@ class PointMaker:
 
         return points
 
-    def display(self, points: np.array, show:bool = False) -> None:
+    def display(self, points: np.ndarray, show:bool = False) -> None:
         plt.plot(points[:,:,0].reshape(-1), points[:,:,1].reshape(-1), 'o')
         if show:
             plt.show()
 
-    def to_probes(self, points: np.array,test_mode: bool=False, repr: bool=False) -> None:
+    def to_probes(self, points: np.ndarray, project_path: str,test_mode: bool=False, repr: bool=False) -> None:
         out = ''
-        for line in open(self.probes_filepath, 'r'):
+        for line in open(f'{project_path}/{self.probes_filepath}', 'r'):
             out += line
             if 'probeLocations' in line:
                 break
@@ -60,7 +64,6 @@ class PointMaker:
 
         for row in points:
             for p in row:
-                # print(p)
                 out += '\t' + f"({p[0]} 0 {p[1]})" + '\n'
 
         out += ');'
@@ -69,7 +72,7 @@ class PointMaker:
             print(out)
 
         if not test_mode:
-            with open(self.probes_filepath, 'w') as f:
+            with open(f'{project_path}/{self.probes_filepath}', 'w') as f:
                 f.write(out)
 
 class DistField:
@@ -140,7 +143,7 @@ class DistField:
 
         return d
 
-    def plot_input(self, xyz: np.ndarray, show:bool=True) -> None:
+    def plot_field(self, xyz: np.ndarray, show:bool=True) -> None:
         shp = int(np.sqrt(len(xyz)))
 
         profile: np.ndarray = np.concatenate([self.naca.upper[::-1], self.naca.lower])
@@ -161,7 +164,7 @@ def main():
     P = PointMaker(top=1, bottom=-1, left=-1, right=1, n_h=8, n_v=8)
     points = P.make()
     P.display(points)
-    P.to_probes(points, test_mode=True)
+    P.to_probes(points, '../../test', test_mode=False, repr=True)
 
 if __name__ == "__main__":
     main()

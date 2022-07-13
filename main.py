@@ -6,6 +6,7 @@ from subprocess import call
 
 # from cython_stuff import shortest_distance_cy
 import numpy as np
+from matplotlib import pyplot
 from more_itertools import consecutive_groups
 from pkg_resources import parse_requirements
 
@@ -70,7 +71,7 @@ def call_c2d(source_path: str) -> None:
 
 # def array_to_file(array: np.ndarray, fname: str, directory: str):
 
-def make_item(name: str, rot: float) -> None:
+def make_item(name: str, rot: float, plot: bool = False) -> None:
     print(name, rot)
 
     naca = NacaProfile(name, CAMBER_POINTS)
@@ -87,23 +88,23 @@ def make_item(name: str, rot: float) -> None:
 
     call_c2d(f"{PATHS['profile_storage']}/{dir_name}")
 
-    dist_field = create_input(naca)
+    dist_field = create_input(naca, plot)
 
     with open(f"{PATHS['profile_storage']}/{dir_name}/input.npy", 'wb') as f:
         np.save(f, dist_field)
 
 @timer
-def main(parallel: bool = False):
+def main(parallel: bool = False, plot:bool = False):
 
     if parallel:
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            [executor.submit(make_item, name, rot) for name, rot in profile_parameters()]
+            [executor.submit(make_item, name, rot, plot) for name, rot in profile_parameters()]
     else:
         for name, rot in profile_parameters():
-            make_item(name, rot)
+            make_item(name, rot, plot)
 
 if __name__ == '__main__':
-    main(parallel=False)
+    main(parallel=False, plot=False)
 
     # a = np.load(f"{PATHS['profile_storage']}/NACA_0012_0/input.npy")
     # print(a)

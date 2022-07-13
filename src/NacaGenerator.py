@@ -1,8 +1,10 @@
-import numpy as np
 import math
-import matplotlib.pyplot as plt
-from src.entities import Line, Vector
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from src.entities import Line, Vector
 
 
 class VVector:

@@ -1,6 +1,7 @@
 import concurrent.futures
 import os
 import re
+import shutil
 import time
 from contextlib import contextmanager
 
@@ -15,7 +16,8 @@ PATHS = {
     'profile_storage': '/home/cernikjo/Documents/diplomka/NACA_data/',
     'c2d_path': '/home/cernikjo/Construct2D_2.1.4/construct2d',
     'c2d_control': './src/c2d_control',
-    'project': '../test'
+    'project': '../naca_clean',
+    'default_path': '../' 
 }
 
 AREA: float = 0.75
@@ -30,7 +32,7 @@ def path_manager(path: str):
     yield 
     os.chdir(previous_path)
 
-def create_input(profile: NacaProfile, plot: bool = False) -> np.ndarray:
+def create_dist_field(profile: NacaProfile, plot: bool = False) -> np.ndarray:
 
     maker = PointMaker(AREA, -AREA, -0.5, 1.5, GRID_SIZE, GRID_SIZE)
     points: np.ndarray = maker.make()
@@ -38,11 +40,12 @@ def create_input(profile: NacaProfile, plot: bool = False) -> np.ndarray:
     maker.to_probes(points, PATHS['project'], repr=False)
     dist_field = DistField(profile, points)
     
-    p2 = dist_field.evaluate_parallel()
+    p: np.ndarray = dist_field.evaluate_parallel()
+    
     if plot:
-        dist_field.plot_field(p2, show=True)
+        dist_field.plot_field(p, show=True)
 
-    return p2
+    return p
 
 # this is generator
 def profile_parameters():
@@ -94,23 +97,33 @@ def make_item(name: str, rot: float, plot: bool = False) -> None:
 
     call_c2d(f"{PATHS['profile_storage']}/{dir_name}")
 
-    dist_field = create_input(naca, plot)
+    dist_field = create_dist_field(naca, plot)
 
     with open(f"{PATHS['profile_storage']}/{dir_name}/input.npy", 'wb') as f:
         np.save(f, dist_field)
 
 @timer
-def main(parallel: bool = False, plot:bool = False):
+def main(plot:bool = False):
 
-    if parallel:
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            [executor.submit(make_item, name, rot, plot) for name, rot in profile_parameters()]
-    else:
-        for name, rot in profile_parameters():
-            make_item(name, rot, plot)
+    for name, rot in profile_parameters():
+        make_item(name, rot, plot)
+
+def main2():
+
+    for name, rot in profile_parameters():
+        dir_name: str = f'NACA_{name}_{rot}'
+        
+        shutil.copytree(f"{PATHS['default_path']}/naca_clean", f"{PATHS['profile_storage']}/{dir_name}/compute", dirs_exist_ok=True)
+
+        shutil.move(f"{PATHS['profile_storage']}/{dir_name}/{dir_name}.p3d", f"{PATHS['profile_storage']}/{dir_name}/compute/mesh.p3d")
+
+        with path_manager(f"{PATHS['profile_storage']}/{dir_name}/compute"):
+            os.system('sh commands.sh mesh.p3d')
+            os.system('simpleFoam')
+            shutil.move('postProcessing/probes/0/p', '../p')
+            # shutil.rmtree(path)
 
 if __name__ == '__main__':
-    main(parallel=False, plot=True)
+    main(plot=False)
+    main2()
 
-    # a = np.load(f"{PATHS['profile_storage']}/NACA_0012_0/input.npy")
-    # print(a)

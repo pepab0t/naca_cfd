@@ -18,7 +18,7 @@ def plot_field(xyz: np.ndarray, show:bool=True) -> None:
 
 def read_probes():
     sel_line = ''
-    with open('./p', 'r') as f:
+    with open('p', 'r') as f:
         for line in f:
             if line.strip().startswith('500'):
                 sel_line = line.strip()
@@ -30,23 +30,38 @@ def read_probes():
 
     return np.array([float(x) for x in vals])
 
-def main():
-    a: np.ndarray = np.zeros((4096,3))
+def probes_to_array():
+    prev_match = None
+    with open('p') as f:
+        for line in f:
+            match = re.search(r".*Probe (\d).*\(.*\).*", line)
+            if match is None:
+                break
+            prev_match = match
+
+    if prev_match is None:
+        return
+
+    count = int(re.findall(r".*Probe (\d+).*", prev_match.string)[-1])+1
+    print(count)
+
+    a: np.ndarray = np.zeros((count,3))
 
     i = 0
-    with open('probes') as f:
+
+    with open('p') as f:
         for line in f:
-            if re.search(r'.*\d+\s\-?\d+\s\-?\d+', line):
-                match = re.findall(r'[\-0-9\.]+', line)
+            if re.search(r'.*Probe\s\d+.*\(.*\).*', line):
+                match = re.findall(r'.*\(([\-0-9\.]+) ([\-0-9\.]+) ([\-0-9\.]+)\).*', line)[0]
                 a[i, 0], a[i, 1] = float(match[0]), float(match[2])
                 i += 1
-
+            else:
+                break
     a[:, 2] = read_probes()
 
-    print(len(a))
     plot_field(a)
-
+    return a
     
 
 if __name__ == '__main__':
-    main()
+    probes_to_array()

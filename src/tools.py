@@ -98,6 +98,8 @@ class DistField:
     @timer
     def evaluate_parallel(self) -> np.ndarray:
 
+        procs: list[concurrent.futures.Future[float]] = []
+
         with concurrent.futures.ProcessPoolExecutor() as executor:
             procs = [executor.submit(self.shortest_distance, point) for point in self.point_field]
 
@@ -108,19 +110,6 @@ class DistField:
             out[i,2] = procs[i].result()
             
         return out
-
-    # def evaluate_parallel_cy(self):
-
-    #     with concurrent.futures.ProcessPoolExecutor() as executor:
-    #         procs = [executor.submit(shortest_distance_cy, self.naca.upper, self.naca.lower, point) for point in self.point_field]
-
-    #     out = np.zeros(shape=(self.point_field.shape[0], self.point_field.shape[1]+1))
-    #     out[:,0:2] = self.point_field.copy()
-
-    #     for i in range(len(procs)):
-    #         out[i,2] = procs[i].result()
-
-    #     return out
 
     def shortest_distance(self, point: np.ndarray) -> float:
         Line._validate_entity(point)

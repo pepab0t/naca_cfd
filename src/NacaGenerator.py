@@ -107,9 +107,9 @@ class NacaProfile():
 
 
         # for i in range(len(yc)):
-        self.upper[:, 0] = self.xc - yt * np.sin(theta) - 0.5
+        self.upper[:, 0] = self.xc - yt * np.sin(theta)
         self.upper[:, 1] = self.yc + yt * np.cos(theta)
-        self.lower[:, 0] = self.xc[1:] + yt[1:] * np.sin(theta[1:]) - 0.5
+        self.lower[:, 0] = self.xc[1:] + yt[1:] * np.sin(theta[1:])
         self.lower[:, 1] = self.yc[1:] - yt[1:] * np.cos(theta[1:])
 
         # self.tranform_points()
@@ -140,19 +140,13 @@ class NacaProfile():
 
         sum_angle = 0
 
-        profile_points = np.concatenate([self.upper[::-1], self.lower])
+        profile_points: np.ndarray = np.concatenate([self.upper[::-1], self.lower])
 
 
         for i in range(1,len(profile_points)):
             a = profile_points[i-1, :] - point
             b = profile_points[i, :] - point
-            # print(profile_points[i-1, :], profile_points[i, :])
             alpha = np.arcsin( Vector.vector_mul(a, b) / (Vector.magnitude(a) * Vector.magnitude(b))) * 180/np.pi
-            # print(alpha)
-            # self.disp(camber=False, show=False)
-            # plt.plot([point[0], point[0]+a[0]], [point[1], point[1]+a[1]], 'r')
-            # plt.plot([point[0], point[0]+b[0]], [point[1], point[1]+b[1]], 'b')
-            # plt.show()
             sum_angle += alpha
 
         return sum_angle < 180
@@ -226,8 +220,11 @@ class NacaProfile():
 
     def to_dat(self, path: str) -> None:
         if not os.path.exists(path):
-            raise FileNotFoundError(f'Invaldi path: {path}')
-        with open(f'{path}/NACA_{self.name}_{self.rotation}.dat', 'w+') as f:
+            raise FileNotFoundError(f'Invalid path: {path}')
+
+        fname: str = path.split("/")[-1]
+
+        with open(f'{path}/{fname}.dat', 'w+') as f:
             f.write(f'NACA {self.name}\n')
 
             for row in self.upper[::-1]:
@@ -271,12 +268,12 @@ class NacaProfile():
 
 def main():
     #, area=[(-2, 2), (3,2), (3,-2), (-2,-2)]
-    p = NacaProfile('6000', 100)
+    p = NacaProfile('6424', 100)
     p.calculate_profile('opened')
     p.transform_points(20)
     # print(p)
-    p.disp()
-    p.to_dat()
+    p.disp(show=True)
+    # p.to_dat()
     # p.to_geo(0.05, 0.5)
 
 if __name__ == '__main__':

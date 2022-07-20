@@ -1,20 +1,9 @@
 import re
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-def plot_field(xyz: np.ndarray, show:bool=True) -> None:
-    shp = int(np.sqrt(len(xyz)))
-    
-    X = xyz[:,0].reshape(shp, shp)
-    Y = xyz[:,1].reshape(shp, shp)
-    Z = xyz[:,2].reshape(shp, shp)
-
-    plt.contourf(X, Y, Z, 100, cmap='coolwarm')
-    plt.colorbar()
-    plt.axis('equal')
-    plt.show()
 
 def read_probes():
     sel_line = ''
@@ -30,7 +19,7 @@ def read_probes():
 
     return np.array([float(x) for x in vals])
 
-def probes_to_array():
+def probes_to_array() -> np.ndarray:
     prev_match = None
     with open('p') as f:
         for line in f:
@@ -40,7 +29,7 @@ def probes_to_array():
             prev_match = match
 
     if prev_match is None:
-        return
+        raise TypeError('Unable to count probes.')
 
     count = int(re.findall(r".*Probe (\d+).*", prev_match.string)[-1])+1
     print(count)
@@ -59,7 +48,6 @@ def probes_to_array():
                 break
     a[:, 2] = read_probes()
 
-    plot_field(a)
     return a
     
 

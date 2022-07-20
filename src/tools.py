@@ -1,6 +1,8 @@
 import concurrent.futures
-import re
+import math
+import os
 import time
+from contextlib import contextmanager
 from typing import Any, Callable
 
 import matplotlib.pyplot as plt
@@ -27,7 +29,7 @@ def timer(fun: Callable[..., Any]) -> Callable[..., Any]:
 class PointMaker:
     probes_filepath = '/system/probes'
 
-    def __init__(self, top, bottom, left, right, n_v=8, n_h=8):
+    def __init__(self, top: float, bottom: float, left: float, right: float, n_v: int=8, n_h: int=8):
         self.start_h = left
         self.start_v = bottom
         self.n_h = n_h
@@ -114,6 +116,8 @@ class DistField:
     def shortest_distance(self, point: np.ndarray) -> float:
         Line._validate_entity(point)
 
+        k = 2
+
         d = 1e6
 
         for i in range(1, len(self.naca.upper)):
@@ -130,7 +134,13 @@ class DistField:
 
         d = (-1)**int(not self.naca.is_outside(point)) * d
 
-        return d
+        if d > 0:
+            # return min(50, 1/d)
+            return math.exp(k * (-d))
+        else:
+            # return max(-50, 1/d)
+            return -math.exp(k * d)
+
 
     def plot_field(self, xyz: np.ndarray, show:bool=True) -> None:
         shp = int(np.sqrt(len(xyz)))
@@ -151,6 +161,18 @@ class DistField:
         if show:
             plt.show()
 
+def directory_name(name: str, rot: float) -> str:
+    rot_str: str = f"{rot:05.2f}"
+    return f"NACA_{name}_{rot_str.replace('.', '')}"
+
+@contextmanager
+def path_manager(path: str):
+    previous_path: str = os.getcwd()
+
+    os.chdir(path)
+    yield 
+    os.chdir(previous_path)
+
 def main():
     P = PointMaker(top=1, bottom=-1, left=-1, right=1, n_h=8, n_v=8)
     points = P.make()
@@ -158,4 +180,5 @@ def main():
     P.to_probes(points, '../../test', test_mode=False, repr=True)
 
 if __name__ == "__main__":
-    main()
+    # main()
+    print(directory_name('6424', 1.08))

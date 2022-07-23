@@ -162,7 +162,12 @@ class DistField:
             plt.show()
 
 def directory_name(name: str, rot: float) -> str:
-    rot_str: str = f"{rot:05.2f}"
+    if rot >= 0:
+        label: str = 'p'
+    else:
+        label: str = 'n'
+
+    rot_str: str = f"{label}{abs(rot):05.2f}"
     return f"NACA_{name}_{rot_str.replace('.', '')}"
 
 @contextmanager

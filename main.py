@@ -62,7 +62,7 @@ def call_c2d(source_path: str) -> None:
     c: int = 0
     with path_manager(source_path):
         while not os.path.isfile(f'{fname}.p3d'):
-            os.system(f'echo \"{instructions}\" | {PATHS["c2d_path"]}')
+            os.system(f'echo \"{instructions}\" | {PATHS["c2d_path"]} > /dev/null')
             c += 1
 
         # remove thrash
@@ -72,7 +72,7 @@ def call_c2d(source_path: str) -> None:
                 print(f'removed {filename}')
     print(f'construct2d runs: {c}')
 
-def make_item(name: str, rot: float, plot: bool = False) -> None:
+def make_item(name: str, rot: float, plot: bool = False, rewrite_input: bool = False) -> None:
     print(name, rot)
 
     naca = NacaProfile(name, CAMBER_POINTS)
@@ -88,43 +88,52 @@ def make_item(name: str, rot: float, plot: bool = False) -> None:
 
     call_c2d(f"{PATHS['profile_storage']}/{dir_name}")
 
-    naca.transform_points(rot)
-    dist_field = create_dist_field(naca, plot)
+    if not os.path.isfile(f"{PATHS['profile_storage']}/{dir_name}/input.npy") or rewrite_input:
+        naca.transform_points(rot)
+        dist_field = create_dist_field(naca, plot)
 
-    with open(f"{PATHS['profile_storage']}/{dir_name}/input.npy", 'wb') as f:
-        np.save(f, dist_field)
+        with open(f"{PATHS['profile_storage']}/{dir_name}/input.npy", 'wb') as f:
+            np.save(f, dist_field)
 
-def run_foam(name: str, rot: float):
+def run_foam(name: str, rot: float, rewrite_output: bool = False, rm_dir: bool = True):
 
     dir_name: str = directory_name(name, rot)
     
+    if os.path.isdir(f'{PATHS["profile_storage"]}/{dir_name}/output.npy') and not rewrite_output:
+        print(f'skipping {dir_name} output')
+        return
+
     shutil.copytree(f"{PATHS['default_path']}/naca_clean", f"{PATHS['profile_storage']}/{dir_name}/compute", dirs_exist_ok=True)
 
     shutil.move(f"{PATHS['profile_storage']}/{dir_name}/{dir_name}.p3d", f"{PATHS['profile_storage']}/{dir_name}/compute/mesh.p3d")
 
     with path_manager(f"{PATHS['profile_storage']}/{dir_name}/compute"):
         os.system(f'sh commands.sh mesh.p3d {rot}')
-        os.system('simpleFoam')
+        print(f'running simpleFoam for {dir_name}')
+        os.system('simpleFoam > log')
         shutil.move('postProcessing/probes/0/p', '../p')
-        # shutil.rmtree(path)
         
     with path_manager(f"{PATHS['profile_storage']}/{dir_name}"):
         with open(f"output.npy", "wb") as f:
-            np.save(f, probes_to_array())
+            np.save(f, probes_to_array('p'))
+        os.system('rm p')
+
+        if rm_dir:
+            shutil.rmtree('compute')
             
 
 @timer
-def main(foam: bool = False, plot:bool = False):
+def main(foam: bool = False):
 
     for name, rot in profile_parameters():
-        make_item(name, rot, plot)
+        make_item(name, rot)
 
     if foam:
         for name, rot in profile_parameters():
-            run_foam(name, rot)
+            run_foam(name, rot, rm_dir=False)
 
         
 
 if __name__ == '__main__':
-    main(True, plot=True)
+    main(True)
 

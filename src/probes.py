@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Optional
 
@@ -5,23 +6,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def read_probes():
+def read_probes(fname: str):
     sel_line = ''
-    with open('p', 'r') as f:
+    with open(fname) as f:
         for line in f:
-            if line.strip().startswith('500'):
-                sel_line = line.strip()
-                break
+            pass
+            # if line.strip().startswith('500'):
+            #     sel_line = line.strip()
+            #     break
     
+    sel_line = line.strip() # type:ignore
     sel_line = sel_line.replace('-1e+300', '0')
     vals = re.findall(r'(\S+)',sel_line)
-    vals.remove('500')
+    print(os.getcwd())
+    vals.pop(0)
 
     return np.array([float(x) for x in vals])
 
-def probes_to_array() -> np.ndarray:
+def probes_to_array(fname: str) -> np.ndarray:
     prev_match = None
-    with open('p') as f:
+    with open(fname) as f:
         for line in f:
             match = re.search(r".*Probe (\d).*\(.*\).*", line)
             if match is None:
@@ -38,7 +42,7 @@ def probes_to_array() -> np.ndarray:
 
     i = 0
 
-    with open('p') as f:
+    with open(fname) as f:
         for line in f:
             if re.search(r'.*Probe\s\d+.*\(.*\).*', line):
                 match = re.findall(r'.*\(([\-0-9\.]+) ([\-0-9\.]+) ([\-0-9\.]+)\).*', line)[0]
@@ -46,10 +50,11 @@ def probes_to_array() -> np.ndarray:
                 i += 1
             else:
                 break
-    a[:, 2] = read_probes()
+    a[:, 2] = read_probes(fname)
 
     return a
     
 
 if __name__ == '__main__':
-    probes_to_array()
+    r: np.ndarray = probes_to_array('/home/cernikjo/Documents/diplomka/NACA_data/NACA_0012_n0800/p')
+    print(r)

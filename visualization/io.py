@@ -13,7 +13,7 @@ def make_grid(xyz: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return X, Y, Z
 
 def plot_fields(inp: np.ndarray, out: np.ndarray) -> None:
-    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))  # type: ignore
+    _, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))  # type: ignore
 
     x1,y1,z1 = make_grid(inp)
     ax1.contourf(x1, y1, z1, 100, cmap='coolwarm')
@@ -26,7 +26,7 @@ def plot_fields(inp: np.ndarray, out: np.ndarray) -> None:
     plt.show()
 
 def main():
-    prof_name: str = "NACA_6424_1000"
+    prof_name: str = "NACA_0015_p1000"
 
     with open(f"{path(prof_name)}/input.npy", "rb") as f:
         inp: np.ndarray = np.load(f)

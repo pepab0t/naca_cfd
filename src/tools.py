@@ -21,7 +21,7 @@ def timer(fun: Callable[..., Any]) -> Callable[..., Any]:
         tic = time.perf_counter()
         r = fun(*args, **kwargs)
         toc = time.perf_counter()
-        print(f'Runtime: {(toc - tic):.2f} s')
+        print(f'Runtime ({fun.__name__}): {(toc - tic):.2f} s')
         return r
 
     return wrapper
@@ -145,7 +145,7 @@ class DistField:
     def plot_field(self, xyz: np.ndarray, show:bool=True) -> None:
         shp = int(np.sqrt(len(xyz)))
 
-        profile: np.ndarray = np.concatenate([self.naca.upper[::-1], self.naca.lower])
+        profile: np.ndarray = self.naca.to_array()
 
         X = xyz[:,0].reshape(shp, shp)
         Y = xyz[:,1].reshape(shp, shp)

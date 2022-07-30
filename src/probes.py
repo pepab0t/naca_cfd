@@ -18,7 +18,6 @@ def read_probes(fname: str):
     sel_line = line.strip() # type:ignore
     sel_line = sel_line.replace('-1e+300', '0')
     vals = re.findall(r'(\S+)',sel_line)
-    print(os.getcwd())
     vals.pop(0)
 
     return np.array([float(x) for x in vals])
@@ -36,7 +35,6 @@ def probes_to_array(fname: str) -> np.ndarray:
         raise TypeError('Unable to count probes.')
 
     count = int(re.findall(r".*Probe (\d+).*", prev_match.string)[-1])+1
-    print(count)
 
     a: np.ndarray = np.zeros((count,3))
 

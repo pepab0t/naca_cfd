@@ -5,6 +5,7 @@ import shutil
 
 # from cython_stuff import shortest_distance_cy
 import numpy as np
+from genericpath import isdir
 
 from src.NacaGenerator import NacaProfile
 from src.probes import probes_to_array
@@ -60,6 +61,7 @@ def call_c2d(source_path: str) -> None:
 
     instructions = instructions.replace('#profile_path#', f'{source_path}/{fname}.dat')
     c: int = 0
+    print(f"Running construct2d for {fname}")
     with path_manager(source_path):
         while not os.path.isfile(f'{fname}.p3d'):
             os.system(f'echo \"{instructions}\" | {PATHS["c2d_path"]} > /dev/null')
@@ -70,15 +72,16 @@ def call_c2d(source_path: str) -> None:
             if re.search(r'(.*\.nmf|.*stats\.p3d)', filename):
                 os.remove(filename)
                 print(f'removed {filename}')
+
     print(f'construct2d runs: {c}')
 
 def make_item(name: str, rot: float, plot: bool = False, rewrite_input: bool = False) -> None:
-    print(name, rot)
+    dir_name: str = directory_name(name, rot)
+    print(f"-----------------\nCreating data for: {dir_name}")
 
     naca = NacaProfile(name, CAMBER_POINTS)
     naca.calculate_profile()
 
-    dir_name: str = directory_name(name, rot)
 
     if not os.path.isdir(f'{PATHS["profile_storage"]}/{dir_name}'):
         folder = os.path.join(f'{PATHS["profile_storage"]}',f'{dir_name}')
@@ -89,33 +92,39 @@ def make_item(name: str, rot: float, plot: bool = False, rewrite_input: bool = F
     call_c2d(f"{PATHS['profile_storage']}/{dir_name}")
 
     if not os.path.isfile(f"{PATHS['profile_storage']}/{dir_name}/input.npy") or rewrite_input:
+        print('Calculating distance field')
         naca.transform_points(rot)
         dist_field = create_dist_field(naca, plot)
 
         with open(f"{PATHS['profile_storage']}/{dir_name}/input.npy", 'wb') as f:
             np.save(f, dist_field)
 
+@timer
 def run_foam(name: str, rot: float, rewrite_output: bool = False, rm_dir: bool = True):
-
+    print("---------")
     dir_name: str = directory_name(name, rot)
+    print(f"Computing {dir_name}")
     
     if os.path.isdir(f'{PATHS["profile_storage"]}/{dir_name}/output.npy') and not rewrite_output:
         print(f'skipping {dir_name} output')
         return
+
+    if os.path.isdir(f"{PATHS['profile_storage']}/{dir_name}/compute"):
+        shutil.rmtree(f"{PATHS['profile_storage']}/{dir_name}/compute")
 
     shutil.copytree(f"{PATHS['default_path']}/naca_clean", f"{PATHS['profile_storage']}/{dir_name}/compute", dirs_exist_ok=True)
 
     shutil.move(f"{PATHS['profile_storage']}/{dir_name}/{dir_name}.p3d", f"{PATHS['profile_storage']}/{dir_name}/compute/mesh.p3d")
 
     with path_manager(f"{PATHS['profile_storage']}/{dir_name}/compute"):
-        os.system(f'sh commands.sh mesh.p3d {rot}')
+        os.system(f'sh commands.sh mesh.p3d {rot} > /dev/null')
         print(f'running simpleFoam for {dir_name}')
         os.system('simpleFoam > log')
         shutil.move('postProcessing/probes/0/p', '../p')
         
     with path_manager(f"{PATHS['profile_storage']}/{dir_name}"):
         with open(f"output.npy", "wb") as f:
-            np.save(f, probes_to_array('p'))
+            np.save(f, probes_to_array('./p'))
         os.system('rm p')
 
         if rm_dir:
@@ -126,13 +135,11 @@ def run_foam(name: str, rot: float, rewrite_output: bool = False, rm_dir: bool =
 def main(foam: bool = False):
 
     for name, rot in profile_parameters():
-        make_item(name, rot)
+        make_item(name, rot, rewrite_input=True, plot=True)
 
     if foam:
         for name, rot in profile_parameters():
-            run_foam(name, rot, rm_dir=False)
-
-        
+            run_foam(name, rot, rewrite_output=True ,rm_dir=False)
 
 if __name__ == '__main__':
     main(True)

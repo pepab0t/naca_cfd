@@ -1,9 +1,12 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import time
-from main import Line, DistField, Vector
-from src.MakePoints import PointMaker
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from main import DistField, Line, Vector
 from NacaGenerator import NacaProfile
+from src.tools import PointMaker
+
 # import cython_stuff
 
 def first():

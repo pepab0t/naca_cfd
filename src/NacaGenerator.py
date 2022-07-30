@@ -266,6 +266,9 @@ class NacaProfile():
         if show:
             plt.show()
 
+    def to_array(self) -> np.ndarray:
+        return np.concatenate([self.upper[::-1], self.lower], axis=0)
+
 def main():
     #, area=[(-2, 2), (3,2), (3,-2), (-2,-2)]
     p = NacaProfile('6424', 100)
